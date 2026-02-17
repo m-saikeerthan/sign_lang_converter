@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+*.h5
+data/
+word_frames/
+landmarks/
+sequences/
