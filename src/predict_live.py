@@ -1,107 +1,108 @@
-
 import cv2
 import numpy as np
 import mediapipe as mp
+import time
 from tensorflow.keras.models import load_model
 
-# Load trained model
+# Load model
 model = load_model("../model.h5")
-labels = [
-    'ALL',
-    'ANGRY',
-    'COLD',
-    'CONGRATULATIONS',
-    'HEAR',
-    'HEART',
-    'LIKE',
-    'NO',
-    'PHONE',
-    'PLEASE',
-    'SORRY',
-    'THIRSTY',
-    'WHERE',
-    'YES',
-    'YOU'
-]
-
-
+labels = np.load("../labels.npy")
+mean = np.load("../mean.npy")
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
-    min_detection_confidence=0.7
+    min_detection_confidence=0.8,
+    min_tracking_confidence=0.8
 )
 
 mp_draw = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
 
-# 🧠 Sentence builder variables
 sentence = []
-last_word = ""
-word_counter = 0
-threshold = 0.80   # same as your confidence
-stable_frames = 12 # how many frames word must repeat
+last_added_word = ""
+current_word = ""
+gesture_start_time = None
+
+THRESHOLD = 0.90
+DIFF_THRESHOLD = 0.25
+GESTURE_HOLD_TIME = 1  # seconds
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(image)
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = hands.process(image_rgb)
 
-    word = "No clear gesture"
+    prediction_text = "No clear gesture"
 
     if results.multi_hand_landmarks:
         hand = results.multi_hand_landmarks[0]
         mp_draw.draw_landmarks(frame, hand, mp_hands.HAND_CONNECTIONS)
 
+        # Same preprocessing as training
+        base_x = hand.landmark[0].x
+        base_y = hand.landmark[0].y
+
         data = []
         for lm in hand.landmark:
-            data.append(lm.x)
-            data.append(lm.y)
+            data.append(lm.x - base_x)
+            data.append(lm.y - base_y)
 
         input_data = np.array(data).reshape(1, 42)
+        input_data = input_data - mean
 
         pred = model.predict(input_data, verbose=0)[0]
-        confidence = np.max(pred)
-        label_index = np.argmax(pred)
 
-        if confidence > threshold:
-            word = labels[label_index]
+        sorted_probs = np.sort(pred)
+        top1 = sorted_probs[-1]
+        top2 = sorted_probs[-2]
 
-            # 🧠 Sentence logic
-            if word == last_word:
-                word_counter += 1
+        if top1 > THRESHOLD and (top1 - top2) > DIFF_THRESHOLD:
+            word = labels[np.argmax(pred)]
+            prediction_text = word
+
+            if word == current_word:
+                # If same word, check duration
+                if gesture_start_time is not None:
+                    elapsed = time.time() - gesture_start_time
+
+                    if elapsed >= GESTURE_HOLD_TIME:
+                        if word != last_added_word:
+                            sentence.append(word)
+                            last_added_word = word
+                        gesture_start_time = None
             else:
-                word_counter = 0
+                # New gesture detected
+                current_word = word
+                gesture_start_time = time.time()
+        else:
+            current_word = ""
+            gesture_start_time = None
 
-            last_word = word
+    else:
+        current_word = ""
+        gesture_start_time = None
 
-            if word_counter == stable_frames:
-                sentence.append(word)
+    cv2.putText(frame, "Word: " + prediction_text, (20, 50),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-    # Show current word
-    cv2.putText(frame, "Word: " + word, (20, 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1, (0, 255, 0), 2)
-
-    # Show sentence
     cv2.putText(frame, "Sentence: " + " ".join(sentence), (20, 100),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8, (255, 0, 0), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
 
-    cv2.imshow("Gesture Recognition", frame)
+    cv2.imshow("AI Sign Language Translator", frame)
 
     key = cv2.waitKey(1) & 0xFF
 
-    if key == ord('c'):   # Clear sentence
+    if key == ord('c'):
         sentence = []
+        last_added_word = ""
 
-    if key == ord('q'):   # Quit
+    if key == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
-

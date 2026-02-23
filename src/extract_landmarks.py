@@ -38,14 +38,19 @@ for word in os.listdir(INPUT_DIR):
         results = hands.process(image_rgb)
 
         if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                landmark_list = []
-                for lm in hand_landmarks.landmark:
-                    landmark_list.append(lm.x)
-                    landmark_list.append(lm.y)
+            hand = results.multi_hand_landmarks[0]
 
-                data.append(landmark_list)
-                detected += 1
+            base_x = hand.landmark[0].x
+            base_y = hand.landmark[0].y
+
+            landmark_list = []
+
+            for lm in hand.landmark:
+                landmark_list.append(lm.x - base_x)
+                landmark_list.append(lm.y - base_y)
+
+            data.append(landmark_list)
+            detected += 1
 
     data = np.array(data)
     np.save(os.path.join(OUTPUT_DIR, f"{word}.npy"), data)

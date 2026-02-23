@@ -12,13 +12,13 @@ DATA_PATH = "../data/landmarks"
 X = []
 y = []
 
+min_samples = 140   # balance classes
+
 for file in os.listdir(DATA_PATH):
     if file.endswith(".npy"):
         word = file.replace(".npy", "")
         data = np.load(os.path.join(DATA_PATH, file))
 
-        # Balance classes by limiting to minimum size
-        min_samples = 140  # use lowest class count (ALL)
         data = data[:min_samples]
 
         for sample in data:
@@ -33,12 +33,23 @@ le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 y_categorical = to_categorical(y_encoded)
 
+# Save correct label order
+np.save("../labels.npy", le.classes_)
+
+# Normalize
+mean = np.mean(X, axis=0)
+X = X - mean
+np.save("../mean.npy", mean)
+
 # Split
 X_train, X_val, y_train, y_val = train_test_split(
-    X, y_categorical, test_size=0.2, random_state=42, stratify=y_encoded
+    X, y_categorical,
+    test_size=0.2,
+    random_state=42,
+    stratify=y_encoded
 )
 
-# Build improved model
+# Model
 model = Sequential()
 model.add(Dense(128, activation="relu", input_shape=(42,)))
 model.add(Dropout(0.4))
@@ -70,5 +81,5 @@ model.fit(
 
 model.save("../model.h5")
 
-print("Training complete and model saved.")
+print("Training complete.")
 print("Classes:", le.classes_)
