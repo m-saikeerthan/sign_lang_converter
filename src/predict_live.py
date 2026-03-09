@@ -2,12 +2,23 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import time
+import os
+import sys
 from tensorflow.keras.models import load_model
 
+# Add src to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from feature_engineer import compute_extended_features_single
+
+# Get the directory where the script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..")
+
 # Load model
-model = load_model("../model.h5")
-labels = np.load("../labels.npy")
-mean = np.load("../mean.npy")
+model = load_model(os.path.join(OUTPUT_DIR, "model.h5"))
+labels = np.load(os.path.join(OUTPUT_DIR, "labels.npy"))
+mean = np.load(os.path.join(OUTPUT_DIR, "mean.npy"))
+std = np.load(os.path.join(OUTPUT_DIR, "std.npy"))
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
@@ -52,8 +63,9 @@ while True:
             data.append(lm.x - base_x)
             data.append(lm.y - base_y)
 
-        input_data = np.array(data).reshape(1, 42)
-        input_data = input_data - mean
+        input_data = np.array(data).astype(np.float32)
+        input_data = compute_extended_features_single(input_data)
+        input_data = (input_data.reshape(1, -1) - mean) / std
 
         pred = model.predict(input_data, verbose=0)[0]
 

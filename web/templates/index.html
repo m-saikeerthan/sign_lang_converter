@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISL — Indian Sign Language Detector</title>
+    <meta name="description" content="Real-time Indian Sign Language detection with AI-powered grammar correction and text-to-speech">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">🤟</span>
+                    <h1>ISL Detector</h1>
+                </div>
+                <span class="badge" id="status-badge">Connecting...</span>
+            </div>
+            <div class="header-right">
+                <span class="fps-display" id="fps-display">— FPS</span>
+                <button class="btn btn-clear" id="btn-clear" title="Clear sentence">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Clear
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left: Camera Feed -->
+            <div class="camera-section">
+                <div class="camera-container">
+                    <video id="video" autoplay playsinline muted></video>
+                    <canvas id="canvas" style="display:none;"></canvas>
+                    <div class="camera-overlay" id="camera-overlay">
+                        <span>📷 Click "Start Camera" to begin</span>
+                    </div>
+                    <div class="camera-status" id="camera-status">
+                        <div class="status-dot" id="status-dot"></div>
+                        <span id="detection-status">No Hand</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-camera" id="btn-camera">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="4"/><path d="M9.5 2h5L17 5h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2.5-3z"/></svg>
+                    Start Camera
+                </button>
+            </div>
+
+            <!-- Right: Results Panel -->
+            <div class="results-section">
+                <!-- Current Word -->
+                <div class="card card-prediction">
+                    <div class="card-label">Current Gesture</div>
+                    <div class="predicted-word" id="predicted-word">—</div>
+                    <div class="confidence-container">
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidence-fill"></div>
+                        </div>
+                        <span class="confidence-text" id="confidence-text">0%</span>
+                    </div>
+                    <!-- Hold Progress -->
+                    <div class="hold-container" id="hold-container" style="display:none;">
+                        <div class="hold-ring">
+                            <svg viewBox="0 0 72 72">
+                                <circle class="hold-ring-bg" cx="36" cy="36" r="30"/>
+                                <circle class="hold-ring-fill" id="hold-ring-fill" cx="36" cy="36" r="30"/>
+                            </svg>
+                            <span class="hold-text" id="hold-text">0%</span>
+                        </div>
+                        <span class="hold-label">Hold steady...</span>
+                    </div>
+                </div>
+
+                <!-- Detected Words -->
+                <div class="card card-sentence">
+                    <div class="card-label">Detected Words</div>
+                    <div class="word-chips" id="word-chips">
+                        <span class="word-placeholder">Words will appear here...</span>
+                    </div>
+                </div>
+
+                <!-- No Hand Timer -->
+                <div class="card card-timer" id="timer-card" style="display:none;">
+                    <div class="timer-content">
+                        <div class="timer-icon">⏱️</div>
+                        <div class="timer-info">
+                            <span class="timer-label">No hand detected</span>
+                            <div class="timer-bar">
+                                <div class="timer-fill" id="timer-fill"></div>
+                            </div>
+                            <span class="timer-text" id="timer-text">Sentence finalizes in 10s...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Corrected Sentence -->
+                <div class="card card-output" id="output-card" style="display:none;">
+                    <div class="card-label">✨ AI-Corrected Sentence</div>
+                    <div class="corrected-sentence" id="corrected-sentence"></div>
+                    <div class="output-actions">
+                        <button class="btn btn-speak" id="btn-speak" title="Speak again">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                            Speak
+                        </button>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="card card-history" id="history-card" style="display:none;">
+                    <div class="card-label">History</div>
+                    <div class="history-list" id="history-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
