@@ -4,12 +4,21 @@ Converts raw sign language word sequences into proper English sentences
 and speaks them aloud.
 """
 
+import os
 import threading
 import pyttsx3
 import google.generativeai as genai
+from dotenv import load_dotenv
 
 # ─── Configuration ───────────────────────────────────────────────────
-GEMINI_API_KEY = "AIzaSyAWDO8u34RuN2B7Niug0coAWHLSoKFQMwk"
+load_dotenv()  # loads from .env file in project root
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise ValueError(
+        "GEMINI_API_KEY not found! "
+        "Create a .env file in the project root with: GEMINI_API_KEY=your_key_here"
+    )
 
 GRAMMAR_PROMPT = (
     "You are a grammar assistant for a sign language translator. "
