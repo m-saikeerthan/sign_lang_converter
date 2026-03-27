@@ -19,18 +19,21 @@ MEAN_PATH = os.path.join(PROJECT_ROOT, "mean.npy")
 STD_PATH = os.path.join(PROJECT_ROOT, "std.npy")
 
 # ─── MediaPipe Hand Tracking ─────────────────────────────────────────
-MP_MAX_HANDS = 1
+MP_MAX_HANDS = 2
 MP_MIN_DETECTION_CONF = 0.7
 MP_MIN_TRACKING_CONF = 0.7
 NUM_LANDMARKS = 21
-NUM_FEATURES = NUM_LANDMARKS * 2  # x, y per landmark = 42
-NUM_EXTENDED_FEATURES = 60        # 42 raw + 18 engineered (distances + angles)
+NUM_FEATURES = NUM_LANDMARKS * 2        # x, y per landmark per hand = 42
+NUM_TWO_HAND_RAW = NUM_FEATURES * 2     # 84 (42 per hand × 2 hands)
+NUM_EXTENDED_FEATURES = 60              # 42 raw + 18 engineered per hand
+NUM_TWO_HAND_EXTENDED = NUM_EXTENDED_FEATURES * 2  # 120 (60 per hand × 2)
 
 # ─── Prediction ──────────────────────────────────────────────────────
-CONFIDENCE_THRESHOLD = 0.80       # minimum confidence to accept a prediction
-DIFF_THRESHOLD = 0.20             # min gap between top-1 and top-2 probabilities
-GESTURE_HOLD_TIME = 1.0           # seconds to hold a gesture before confirming
-SMOOTHING_ALPHA = 0.55            # EMA smoothing factor (0=max smooth, 1=no smooth)
+CONFIDENCE_THRESHOLD = 0.80
+DIFF_THRESHOLD = 0.20
+GESTURE_HOLD_TIME = 1.0
+SMOOTHING_ALPHA = 0.55
+NO_HAND_TIMEOUT = 5.0   # seconds before finalizing sentence
 
 # ─── Camera ──────────────────────────────────────────────────────────
 CAMERA_INDEX = 0
@@ -45,7 +48,7 @@ COLOR_WHITE = (255, 255, 255)
 COLOR_BLACK = (0, 0, 0)
 COLOR_GRAY = (100, 100, 100)
 COLOR_DARK_BG = (30, 30, 30)
-COLOR_ACCENT = (255, 180, 0)      # bright blue accent
+COLOR_ACCENT = (255, 180, 0)
 COLOR_SENTENCE_BG = (40, 40, 40)
 COLOR_LANDMARK = (0, 255, 200)
 COLOR_CONNECTION = (200, 200, 200)
@@ -64,4 +67,4 @@ TRAIN_BATCH_SIZE = 16
 EARLY_STOP_PATIENCE = 10
 CAPTURE_IMAGES_PER_WORD = 150
 CAPTURE_IMAGES_PER_PHASE = 30
-CAPTURE_INTERVAL = 0.4  # seconds between auto-captures
+CAPTURE_INTERVAL = 0.4

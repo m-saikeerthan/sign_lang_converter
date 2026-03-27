@@ -1,7 +1,7 @@
 """
 Feature engineering for ISL hand landmarks.
-Computes extended features (distances + angles) from raw 42-coord landmarks.
-Shared by both training and inference pipelines.
+Computes extended features (distances + angles) from raw landmarks.
+Supports single-hand (42→60) and two-hand (84→120).
 """
 
 import numpy as np
@@ -42,56 +42,69 @@ def _angle_at_joint(a, b, c):
     return np.arccos(cos_angle)
 
 
-def compute_extended_features_single(landmarks):
+def compute_extended_features_single(landmarks_42):
     """
     Compute extended features for a single 42-element landmark vector.
-
     Returns: np.array of shape (60,) — 42 raw + 18 engineered features.
     """
-    features = list(landmarks)  # start with raw 42
+    features = list(landmarks_42)
 
-    wrist = _get_point(landmarks, WRIST)
+    wrist = _get_point(landmarks_42, WRIST)
 
-    # --- 5 fingertip-to-wrist distances ---
+    # 5 fingertip-to-wrist distances
     for tip in FINGERTIPS:
-        features.append(_distance(_get_point(landmarks, tip), wrist))
+        features.append(_distance(_get_point(landmarks_42, tip), wrist))
 
-    # --- 4 adjacent fingertip distances ---
+    # 4 adjacent fingertip distances
     for i in range(len(FINGERTIPS) - 1):
-        p1 = _get_point(landmarks, FINGERTIPS[i])
-        p2 = _get_point(landmarks, FINGERTIPS[i + 1])
+        p1 = _get_point(landmarks_42, FINGERTIPS[i])
+        p2 = _get_point(landmarks_42, FINGERTIPS[i + 1])
         features.append(_distance(p1, p2))
 
-    # --- 4 thumb-to-other-fingertip distances ---
-    thumb = _get_point(landmarks, THUMB_TIP)
-    for tip in FINGERTIPS[1:]:  # skip thumb itself
-        features.append(_distance(thumb, _get_point(landmarks, tip)))
+    # 4 thumb-to-other-fingertip distances
+    thumb = _get_point(landmarks_42, THUMB_TIP)
+    for tip in FINGERTIPS[1:]:
+        features.append(_distance(thumb, _get_point(landmarks_42, tip)))
 
-    # --- 5 finger curl angles (at PIP/IP joint) ---
+    # 5 finger curl angles
     for i in range(5):
-        a = _get_point(landmarks, MCP_JOINTS[i])
-        b = _get_point(landmarks, PIP_JOINTS[i])
-        c = _get_point(landmarks, DIP_JOINTS[i])
+        a = _get_point(landmarks_42, MCP_JOINTS[i])
+        b = _get_point(landmarks_42, PIP_JOINTS[i])
+        c = _get_point(landmarks_42, DIP_JOINTS[i])
         features.append(_angle_at_joint(a, b, c))
 
     return np.array(features, dtype=np.float32)
 
 
 def compute_extended_features(X):
-    """
-    Compute extended features for a batch of landmark vectors.
-
-    Args:
-        X: np.array of shape (N, 42) — raw wrist-centered landmarks.
-
-    Returns:
-        np.array of shape (N, 60) — extended feature vectors.
-    """
+    """Batch version for single-hand: (N, 42) → (N, 60)."""
     return np.array(
         [compute_extended_features_single(row) for row in X],
         dtype=np.float32
     )
 
 
-# Number of extended features produced
+def compute_two_hand_features_single(landmarks_84):
+    """
+    Compute extended features for a two-hand 84-element landmark vector.
+    Splits into two 42-vectors, engineers each, concatenates.
+    Returns: np.array of shape (120,) — 60 per hand × 2.
+    """
+    hand1 = landmarks_84[:42]
+    hand2 = landmarks_84[42:]
+    feat1 = compute_extended_features_single(hand1)
+    feat2 = compute_extended_features_single(hand2)
+    return np.concatenate([feat1, feat2])
+
+
+def compute_two_hand_features(X):
+    """Batch version for two-hand: (N, 84) → (N, 120)."""
+    return np.array(
+        [compute_two_hand_features_single(row) for row in X],
+        dtype=np.float32
+    )
+
+
+# Feature counts
 NUM_EXTENDED = 60
+NUM_TWO_HAND_EXT = 120

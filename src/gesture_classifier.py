@@ -1,6 +1,6 @@
 """
 Fast gesture classifier with TFLite inference and temporal smoothing.
-Falls back to Keras .h5 model if TFLite model is not available.
+Supports two-hand (120-dim) input with fallback to Keras .h5.
 """
 
 import os
@@ -10,14 +10,14 @@ import numpy as np
 from config import (
     MODEL_TFLITE_PATH, MODEL_H5_PATH, LABELS_PATH, MEAN_PATH, STD_PATH,
     CONFIDENCE_THRESHOLD, DIFF_THRESHOLD, GESTURE_HOLD_TIME,
-    SMOOTHING_ALPHA, NUM_EXTENDED_FEATURES
+    SMOOTHING_ALPHA, NUM_TWO_HAND_EXTENDED
 )
-from feature_engineer import compute_extended_features_single
+from feature_engineer import compute_two_hand_features_single
 
 
 class GestureClassifier:
     """
-    Classifies hand landmarks into ISL gesture words.
+    Classifies two-hand landmarks into ISL gesture words.
     Uses EMA smoothing + gesture hold timer for stable predictions.
     """
 
@@ -41,7 +41,6 @@ class GestureClassifier:
         self._last_confirmed_word = ""
 
     def _load_tflite(self):
-        """Load TFLite model for fast inference."""
         try:
             import tensorflow as tf
             self._interpreter = tf.lite.Interpreter(model_path=MODEL_TFLITE_PATH)
@@ -55,14 +54,12 @@ class GestureClassifier:
             self._load_keras()
 
     def _load_keras(self):
-        """Load full Keras model as fallback."""
         from tensorflow.keras.models import load_model
         self._keras_model = load_model(MODEL_H5_PATH)
         self._use_tflite = False
         print(f"[ISL] Loaded Keras model ({self.num_classes} classes)")
 
     def _predict_raw(self, input_data):
-        """Run inference and return raw probabilities."""
         if self._use_tflite:
             self._interpreter.set_tensor(
                 self._input_details[0]['index'],
@@ -75,26 +72,22 @@ class GestureClassifier:
         else:
             return self._keras_model.predict(input_data, verbose=0)[0]
 
-    def classify(self, landmarks):
+    def classify(self, landmarks_84):
         """
-        Classify a 42-feature landmark vector.
-        
-        Args:
-            landmarks: np.array of shape (42,) — wrist-centered hand landmarks.
-            
-        Returns:
-            dict with keys:
-                'word': predicted ISL word (str) or "" if no clear gesture
-                'confidence': float 0-1
-                'status': 'detecting' | 'holding' | 'confirmed'
-                'hold_progress': float 0-1 (progress toward confirmation)
-                'all_probs': smoothed probability array
-        """
-        # Feature engineering: 42 raw → 60 extended
-        extended = compute_extended_features_single(landmarks)
+        Classify a two-hand 84-feature landmark vector.
 
-        # Standardize (mean + std)
-        input_data = (extended.reshape(1, NUM_EXTENDED_FEATURES) - self.mean) / self.std
+        Args:
+            landmarks_84: np.array shape (84,) — two-hand wrist-centered landmarks.
+
+        Returns:
+            dict: word, confidence, status, hold_progress, all_probs
+        """
+        # Feature engineering: 84 raw → 120 extended
+        extended = compute_two_hand_features_single(landmarks_84)
+
+        # Standardize
+        num_feats = len(self.mean)
+        input_data = (extended[:num_feats].reshape(1, num_feats) - self.mean) / self.std
 
         # Raw prediction
         raw_probs = self._predict_raw(input_data)
@@ -118,7 +111,6 @@ class GestureClassifier:
             'all_probs': probs.copy()
         }
 
-        # Check threshold + margin
         if top1 > CONFIDENCE_THRESHOLD and (top1 - top2) > DIFF_THRESHOLD:
             word = self.labels[np.argmax(probs)]
             result['word'] = word
@@ -137,7 +129,6 @@ class GestureClassifier:
                     else:
                         result['status'] = 'holding'
             else:
-                # New gesture detected
                 self._current_word = word
                 self._gesture_start_time = time.time()
                 result['status'] = 'holding'
@@ -149,7 +140,6 @@ class GestureClassifier:
         return result
 
     def reset(self):
-        """Reset smoothing and gesture state."""
         self._smoothed_probs = np.zeros(self.num_classes, dtype=np.float32)
         self._current_word = ""
         self._gesture_start_time = None

@@ -4,118 +4,259 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ISL — Indian Sign Language Detector</title>
-    <meta name="description" content="Real-time Indian Sign Language detection with AI-powered grammar correction and text-to-speech">
+    <meta name="description" content="Real-time Indian Sign Language detection with AI-powered grammar correction, Hindi translation, and text-to-speech">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">
-                    <span class="logo-icon">🤟</span>
-                    <h1>ISL Detector</h1>
-                </div>
-                <span class="badge" id="status-badge">Connecting...</span>
-            </div>
-            <div class="header-right">
-                <span class="fps-display" id="fps-display">— FPS</span>
-                <button class="btn btn-clear" id="btn-clear" title="Clear sentence">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    Clear
-                </button>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Left: Camera Feed -->
-            <div class="camera-section">
-                <div class="camera-container">
-                    <video id="video" autoplay playsinline muted></video>
-                    <canvas id="canvas" style="display:none;"></canvas>
-                    <div class="camera-overlay" id="camera-overlay">
-                        <span>📷 Click "Start Camera" to begin</span>
-                    </div>
-                    <div class="camera-status" id="camera-status">
-                        <div class="status-dot" id="status-dot"></div>
-                        <span id="detection-status">No Hand</span>
-                    </div>
-                </div>
-                <button class="btn btn-primary btn-camera" id="btn-camera">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="4"/><path d="M9.5 2h5L17 5h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2.5-3z"/></svg>
-                    Start Camera
-                </button>
+    <!-- ═══════════ SETUP SCREEN ═══════════ -->
+    <div class="screen" id="setup-screen">
+        <div class="setup-container">
+            <div class="setup-logo">
+                <span class="setup-icon">🤟</span>
+                <h1>ISL Detector</h1>
+                <p class="setup-subtitle">Indian Sign Language Translator</p>
             </div>
 
-            <!-- Right: Results Panel -->
-            <div class="results-section">
-                <!-- Current Word -->
-                <div class="card card-prediction">
-                    <div class="card-label">Current Gesture</div>
-                    <div class="predicted-word" id="predicted-word">—</div>
-                    <div class="confidence-container">
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" id="confidence-fill"></div>
+            <!-- Mode Selection -->
+            <div class="setup-section">
+                <h2>Choose Mode</h2>
+                <div class="mode-cards">
+                    <div class="mode-card selected" id="mode-sign-to-text" data-mode="sign-to-text">
+                        <div class="mode-icon">🖐️➡️📝</div>
+                        <div class="mode-title">Sign → Text</div>
+                        <div class="mode-desc">Show hand gestures to camera and get text</div>
+                    </div>
+                    <div class="mode-card" id="mode-text-to-sign" data-mode="text-to-sign">
+                        <div class="mode-icon">📝➡️🤟</div>
+                        <div class="mode-title">Text → Sign</div>
+                        <div class="mode-desc">Type text and see ISL gesture images</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hand Preference (only for sign-to-text) -->
+            <div class="setup-section" id="hand-pref-section">
+                <h2>Dominant Hand</h2>
+                <div class="hand-toggle">
+                    <button class="hand-btn selected" id="hand-right" data-hand="right">
+                        🤚 Right Hand
+                    </button>
+                    <button class="hand-btn" id="hand-left" data-hand="left">
+                        ✋ Left Hand
+                    </button>
+                </div>
+            </div>
+
+
+
+            <button class="btn btn-start" id="btn-start">
+                Start Detector →
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════ DETECTOR SCREEN (Sign → Text) ═══════════ -->
+    <div class="screen hidden" id="detector-screen">
+        <div class="app-container">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="btn btn-back" id="btn-back" title="Back to setup">
+                        ← Back
+                    </button>
+                    <div class="logo">
+                        <span class="logo-icon">🤟</span>
+                        <h1>ISL Detector</h1>
+                    </div>
+                    <span class="badge" id="status-badge">Connecting...</span>
+                </div>
+                <div class="header-right">
+                    <span class="fps-display" id="fps-display">— FPS</span>
+                    <button class="btn btn-clear" id="btn-clear" title="Clear sentence">
+                        🗑 Clear
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Left: Camera Feed -->
+                <div class="camera-section">
+                    <div class="camera-container">
+                        <video id="video" autoplay playsinline muted></video>
+                        <canvas id="canvas" style="display:none;"></canvas>
+                        <!-- Annotated frame overlay -->
+                        <img id="annotated-overlay" class="annotated-overlay" alt="">
+                        <div class="camera-overlay" id="camera-overlay">
+                            <span>📷 Click "Start Camera" to begin</span>
                         </div>
-                        <span class="confidence-text" id="confidence-text">0%</span>
-                    </div>
-                    <!-- Hold Progress -->
-                    <div class="hold-container" id="hold-container" style="display:none;">
-                        <div class="hold-ring">
-                            <svg viewBox="0 0 72 72">
-                                <circle class="hold-ring-bg" cx="36" cy="36" r="30"/>
-                                <circle class="hold-ring-fill" id="hold-ring-fill" cx="36" cy="36" r="30"/>
-                            </svg>
-                            <span class="hold-text" id="hold-text">0%</span>
+                        <div class="camera-status" id="camera-status">
+                            <div class="status-dot" id="status-dot"></div>
+                            <span id="detection-status">No Hand</span>
                         </div>
-                        <span class="hold-label">Hold steady...</span>
                     </div>
+                    <button class="btn btn-primary btn-camera" id="btn-camera">
+                        📷 Start Camera
+                    </button>
                 </div>
 
-                <!-- Detected Words -->
-                <div class="card card-sentence">
-                    <div class="card-label">Detected Words</div>
-                    <div class="word-chips" id="word-chips">
-                        <span class="word-placeholder">Words will appear here...</span>
-                    </div>
-                </div>
-
-                <!-- No Hand Timer -->
-                <div class="card card-timer" id="timer-card" style="display:none;">
-                    <div class="timer-content">
-                        <div class="timer-icon">⏱️</div>
-                        <div class="timer-info">
-                            <span class="timer-label">No hand detected</span>
-                            <div class="timer-bar">
-                                <div class="timer-fill" id="timer-fill"></div>
+                <!-- Right: Results Panel -->
+                <div class="results-section">
+                    <!-- Current Word -->
+                    <div class="card card-prediction">
+                        <div class="card-label">Current Gesture</div>
+                        <div class="predicted-word" id="predicted-word">—</div>
+                        <div class="confidence-container">
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidence-fill"></div>
                             </div>
-                            <span class="timer-text" id="timer-text">Sentence finalizes in 10s...</span>
+                            <span class="confidence-text" id="confidence-text">0%</span>
+                        </div>
+                        <div class="hold-container" id="hold-container" style="display:none;">
+                            <div class="hold-ring">
+                                <svg viewBox="0 0 72 72">
+                                    <circle class="hold-ring-bg" cx="36" cy="36" r="30"/>
+                                    <circle class="hold-ring-fill" id="hold-ring-fill" cx="36" cy="36" r="30"/>
+                                </svg>
+                                <span class="hold-text" id="hold-text">0%</span>
+                            </div>
+                            <span class="hold-label">Hold steady...</span>
+                        </div>
+                    </div>
+
+                    <!-- Detected Words with Gesture Gallery -->
+                    <div class="card card-sentence">
+                        <div class="card-label">Detected Words</div>
+                        <div class="word-chips" id="word-chips">
+                            <span class="word-placeholder">Words will appear here...</span>
+                        </div>
+                    </div>
+
+                    <!-- No Hand Timer -->
+                    <div class="card card-timer" id="timer-card" style="display:none;">
+                        <div class="timer-content">
+                            <div class="timer-icon">⏱️</div>
+                            <div class="timer-info">
+                                <span class="timer-label">No hand detected</span>
+                                <div class="timer-bar">
+                                    <div class="timer-fill" id="timer-fill"></div>
+                                </div>
+                                <span class="timer-text" id="timer-text">Sentence finalizes in 5s...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Corrected Sentence Output -->
+                    <div class="card card-output" id="output-card" style="display:none;">
+                        <div class="card-label">✨ AI-Corrected Sentence</div>
+                        <div class="corrected-sentence" id="corrected-sentence"></div>
+                        <div class="hindi-sentence" id="hindi-sentence" style="display:none;"></div>
+                        <p class="click-hint" id="click-hint" style="display:none;">💡 Click any word above to see its gesture</p>
+                        <div class="output-actions">
+                            <button class="btn btn-speak" id="btn-speak" title="Speak">
+                                🔊 Speak
+                            </button>
+                            <button class="btn btn-copy" id="btn-copy" title="Copy to clipboard">
+                                📋 Copy
+                            </button>
+                            <button class="btn btn-download" id="btn-download" title="Download as text">
+                                ⬇ Download
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History -->
+                    <div class="card card-history" id="history-card" style="display:none;">
+                        <div class="card-label">History</div>
+                        <div class="history-list" id="history-list"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ═══════════ TEXT → SIGN SCREEN ═══════════ -->
+    <div class="screen hidden" id="text-to-sign-screen">
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="btn btn-back" id="btn-back-tts" title="Back to setup">
+                        ← Back
+                    </button>
+                    <div class="logo">
+                        <span class="logo-icon">📝</span>
+                        <h1>Text → Sign</h1>
+                    </div>
+                    <span class="badge" id="tts-status-badge">Ready</span>
+                </div>
+            </header>
+
+            <main class="tts-content">
+                <div class="tts-input-section">
+                    <div class="card">
+                        <div class="card-label">Type a sentence</div>
+                        <div class="tts-input-row">
+                            <input type="text" class="tts-input" id="tts-input"
+                                   placeholder="e.g. I am happy to see you"
+                                   autocomplete="off">
+                            <button class="btn btn-primary btn-translate" id="btn-translate">
+                                Translate →
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Corrected Sentence -->
-                <div class="card card-output" id="output-card" style="display:none;">
-                    <div class="card-label">✨ AI-Corrected Sentence</div>
-                    <div class="corrected-sentence" id="corrected-sentence"></div>
-                    <div class="output-actions">
-                        <button class="btn btn-speak" id="btn-speak" title="Speak again">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                            Speak
-                        </button>
+                <!-- Slideshow Area -->
+                <div class="tts-slideshow" id="tts-slideshow" style="display:none;">
+                    <div class="card">
+                        <div class="card-label">ISL Gesture Slideshow</div>
+                        <div class="slideshow-container">
+                            <div class="slideshow-image-area">
+                                <img id="slideshow-image" class="slideshow-img" alt="ISL Gesture">
+                                <div class="slideshow-loading" id="slideshow-loading">
+                                    <div class="spinner"></div>
+                                    <span>Generating gesture images...</span>
+                                </div>
+                            </div>
+                            <div class="slideshow-word" id="slideshow-word">—</div>
+                            <div class="slideshow-progress" id="slideshow-progress"></div>
+                        </div>
+                        <div class="slideshow-controls">
+                            <button class="btn btn-slide" id="btn-prev">⏮ Prev</button>
+                            <button class="btn btn-slide" id="btn-play">⏯ Play</button>
+                            <button class="btn btn-slide" id="btn-next">Next ⏭</button>
+                            <select class="speed-select" id="speed-select">
+                                <option value="3000">Slow</option>
+                                <option value="2000" selected>Normal</option>
+                                <option value="1000">Fast</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- History -->
-                <div class="card card-history" id="history-card" style="display:none;">
-                    <div class="card-label">History</div>
-                    <div class="history-list" id="history-list"></div>
+                <!-- All gesture cards grid -->
+                <div class="tts-grid" id="tts-grid" style="display:none;">
+                    <div class="card">
+                        <div class="card-label">All Gestures</div>
+                        <div class="gesture-grid" id="gesture-grid"></div>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Gesture Modal -->
+    <div class="modal-overlay" id="gesture-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">✕</button>
+            <img id="modal-image" class="modal-image" alt="Gesture">
+            <div class="modal-word" id="modal-word"></div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>

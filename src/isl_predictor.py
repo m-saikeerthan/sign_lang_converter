@@ -5,6 +5,7 @@ A polished, fast, and smooth sign language translator with live UI.
 Controls:
     q — Quit
     c — Clear sentence
+    
     r — Reset gesture state
 """
 
@@ -18,7 +19,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
-    CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
+    CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT, NO_HAND_TIMEOUT,
     COLOR_GREEN, COLOR_YELLOW, COLOR_RED, COLOR_WHITE, COLOR_BLACK,
     COLOR_GRAY, COLOR_DARK_BG, COLOR_ACCENT, COLOR_SENTENCE_BG,
     FONT, FONT_SMALL, FONT_MEDIUM, FONT_LARGE, FONT_THICKNESS,
@@ -46,8 +47,8 @@ class ISLPredictor:
         self.fps = 0.0
         self._prev_time = time.time()
         self._fps_samples = []
-        self._no_hand_since = None  # timestamp when hand was last lost
-        self._NO_HAND_TIMEOUT = 10.0  # seconds before clearing sentence
+        self._no_hand_since = None
+        self._NO_HAND_TIMEOUT = NO_HAND_TIMEOUT  # 5 seconds
 
         # Camera
         self.cap = cv2.VideoCapture(CAMERA_INDEX)
@@ -210,7 +211,7 @@ class ISLPredictor:
             self._update_fps()
 
             # ─── Process ──────────────────────────────────
-            landmarks, raw_hand = self.tracker.process(frame)
+            landmarks, raw_hands = self.tracker.process(frame)
 
             result = None
             if landmarks is not None:
@@ -235,7 +236,7 @@ class ISLPredictor:
                     self._no_hand_since = None  # reset so it doesn't keep firing
 
             # ─── Draw ────────────────────────────────────
-            self.tracker.draw(frame, raw_hand)
+            self.tracker.draw(frame, raw_hands)
             self._draw_top_bar(frame, result)
             self._draw_prediction(frame, result)
             self._draw_sentence(frame)
