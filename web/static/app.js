@@ -8,10 +8,16 @@ const $ = id => document.getElementById(id);
 // Screens
 const screenHome     = $('screen-home');
 const screenDetector = $('screen-detector');
+const screenFuture   = $('screen-future');
+const screenAbout    = $('screen-about');
+const screenMore     = $('screen-more');
 
 // Navigation
 const navBtnHome     = $('nav-btn-home');
 const navBtnDetector = $('nav-btn-detector');
+const navBtnFuture   = $('nav-btn-future');
+const navBtnAbout    = $('nav-btn-about');
+const navBtnMore     = $('nav-btn-more');
 const navItems       = document.querySelectorAll('.nav-item');
 
 // Home
@@ -84,18 +90,26 @@ socket.on('disconnect', () => {
 function switchScreen(screenId, activeNavBtn) {
     screenHome.classList.add('hidden');
     screenDetector.classList.add('hidden');
-    $(screenId).classList.remove('hidden');
+    if (screenFuture) screenFuture.classList.add('hidden');
+    if (screenAbout) screenAbout.classList.add('hidden');
+    if (screenMore) screenMore.classList.add('hidden');
+    
+    const targetScreen = $(screenId);
+    if (targetScreen) targetScreen.classList.remove('hidden');
 
     navItems.forEach(item => item.classList.remove('active'));
     if (activeNavBtn) activeNavBtn.classList.add('active');
 
-    if (screenId === 'screen-home' && cameraActive) {
+    if (screenId !== 'screen-detector' && cameraActive) {
         stopCamera();
     }
 }
 
-navBtnHome.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-home', navBtnHome); });
-navBtnDetector.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-detector', navBtnDetector); });
+if (navBtnHome) navBtnHome.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-home', navBtnHome); });
+if (navBtnDetector) navBtnDetector.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-detector', navBtnDetector); });
+if (navBtnFuture) navBtnFuture.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-future', navBtnFuture); });
+if (navBtnAbout) navBtnAbout.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-about', navBtnAbout); });
+if (navBtnMore) navBtnMore.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-more', navBtnMore); });
 
 btnHeroStart.addEventListener('click', () => {
     switchScreen('screen-detector', navBtnDetector);
@@ -103,6 +117,13 @@ btnHeroStart.addEventListener('click', () => {
         startCamera();
     }
 });
+
+const btnHeroFuture = $('btn-hero-future');
+if (btnHeroFuture) {
+    btnHeroFuture.addEventListener('click', () => {
+        switchScreen('screen-future', navBtnFuture);
+    });
+}
 
 // ─── Hand Toggle ────────────────────────────────────────────────────
 function setHandPreference(hand) {

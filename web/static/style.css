@@ -658,3 +658,90 @@ body {
     z-index: 1000;
 }
 .toast.show { bottom: 30px; }
+
+/* ═══════════ INFO SCREENS ═══════════ */
+.info-hero {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-top: 20px;
+}
+.info-hero h1 {
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--accent-blue);
+    margin-bottom: 16px;
+}
+.info-hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+}
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.info-grid.dual {
+    /* Kept for compatibility but functions the same conceptually if we want consistent rows */
+    flex-direction: column;
+}
+.info-card {
+    background: var(--bg-elevated);
+    padding: 40px;
+    border-radius: var(--radius-lg);
+    border: 2px solid rgba(139, 92, 246, 0.3); /* Purple Color Boundary */
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.08); /* Colorful Shadow */
+    transition: var(--transition);
+}
+.info-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15); /* Stronger hover shadow */
+    border-color: var(--accent-purple);
+}
+.info-card.wide {
+    width: 100%;
+}
+.info-card h3 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent-purple);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.info-card p {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+.tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+}
+.tech-tag {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-purple);
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.timeline-list {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+.timeline-list li { margin-bottom: 12px; }
+.timeline-list li strong { color: var(--text-primary); }
