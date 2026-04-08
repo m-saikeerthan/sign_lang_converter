@@ -1,80 +1,60 @@
 /**
- * ISL Detector — Web Frontend Logic
- * Setup screen, Sign→Text detection, Text→Sign (dataset + AI fallback),
- * gesture gallery with snapshots, sentence export, English TTS.
+ * ISL Detector — Web Frontend Logic (Refactored for New UI)
  */
 
 // ─── Elements ───────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 // Screens
-const setupScreen      = $('setup-screen');
-const detectorScreen   = $('detector-screen');
-const textToSignScreen = $('text-to-sign-screen');
+const screenHome     = $('screen-home');
+const screenDetector = $('screen-detector');
 
-// Setup
-const modeCards    = document.querySelectorAll('.mode-card');
-const handBtns     = document.querySelectorAll('.hand-btn');
-const handPrefSec  = $('hand-pref-section');
-const btnStart     = $('btn-start');
+// Navigation
+const navBtnHome     = $('nav-btn-home');
+const navBtnDetector = $('nav-btn-detector');
+const navItems       = document.querySelectorAll('.nav-item');
 
-// Detector
+// Home
+const btnHeroStart   = $('btn-hero-start');
+
+// Detector - Camera & Controls
 const video            = $('video');
 const canvas           = $('canvas');
 const ctx              = canvas.getContext('2d');
-const annotatedOverlay = $('annotated-overlay');
-const btnCamera        = $('btn-camera');
-const btnClear         = $('btn-clear');
-const btnSpeak         = $('btn-speak');
-const btnCopy          = $('btn-copy');
-const btnDownload      = $('btn-download');
-const btnBack          = $('btn-back');
 const cameraOverlay    = $('camera-overlay');
-const statusBadge      = $('status-badge');
+const annotatedOverlay = $('annotated-overlay');
+const cameraStatus     = $('camera-status');
 const statusDot        = $('status-dot');
 const detectionStatus  = $('detection-status');
+const btnCamera        = $('btn-camera');
+
+// Detector - Subheader
 const fpsDisplay       = $('fps-display');
+const btnHandRight     = $('hand-right');
+const btnHandLeft      = $('hand-left');
+const btnClear         = $('btn-clear');
+
+// Detector - Results
 const predictedWord    = $('predicted-word');
 const confidenceFill   = $('confidence-fill');
 const confidenceText   = $('confidence-text');
-const holdContainer    = $('hold-container');
-const holdRingFill     = $('hold-ring-fill');
-const holdText         = $('hold-text');
-const wordChips        = $('word-chips');
-const timerCard        = $('timer-card');
+const timerContainer   = $('timer-container');
 const timerFill        = $('timer-fill');
-const timerText        = $('timer-text');
+const wordChips        = $('word-chips');
 const outputCard       = $('output-card');
 const correctedSentence = $('corrected-sentence');
-const hindiSentence    = $('hindi-sentence');
-const clickHint        = $('click-hint');
-const historyCard      = $('history-card');
-const historyList      = $('history-list');
+const btnSpeak         = $('btn-speak');
+const btnCopy          = $('btn-copy');
 const toast            = $('toast');
+const statusBadge      = $('status-badge');
 
-// Text to Sign
-const btnBackTts       = $('btn-back-tts');
-const ttsInput         = $('tts-input');
-const btnTranslate     = $('btn-translate');
-const ttsSlideshow     = $('tts-slideshow');
-const ttsGrid          = $('tts-grid');
-const slideshowWord    = $('slideshow-word');
-const slideshowProgress = $('slideshow-progress');
-const slideshowLoading = $('slideshow-loading');
-const btnPrev          = $('btn-prev');
-const btnPlay          = $('btn-play');
-const btnNext          = $('btn-next');
-const speedSelect      = $('speed-select');
-const gestureGrid      = $('gesture-grid');
-
-// Modal
+// Modal Elements
 const gestureModal = $('gesture-modal');
 const modalClose   = $('modal-close');
 const modalImage   = $('modal-image');
 const modalWord    = $('modal-word');
 
 // ─── State ──────────────────────────────────────────────────────────
-let selectedMode = 'sign-to-text';
 let selectedHand = 'right';
 let cameraActive = false;
 let streamRef    = null;
@@ -82,80 +62,63 @@ let sendInterval = null;
 let lastCorrectedSentence = '';
 let frameCount    = 0;
 let fpsStartTime  = Date.now();
+let lastSentenceKey = '';
 
 // Gesture gallery: word → snapshot
 let wordSnapshots = {};
-let lastSentenceKey = '';
-
-// Slideshow
-let slideshowData    = [];
-let slideshowIndex   = 0;
-let slideshowPlaying = false;
-let slideshowTimer   = null;
-
-// History dedup
-let lastHistoryRaw = '';
 
 // ─── Socket ─────────────────────────────────────────────────────────
 const socket = io();
 
 socket.on('connect', () => {
     statusBadge.textContent = 'Connected';
-    statusBadge.classList.add('connected');
-    const b = $('tts-status-badge');
-    if (b) { b.textContent = 'Connected'; b.classList.add('connected'); }
+    statusBadge.classList.remove('connecting');
 });
 
 socket.on('disconnect', () => {
     statusBadge.textContent = 'Disconnected';
-    statusBadge.classList.remove('connected');
+    statusBadge.classList.add('connecting');
 });
 
-socket.on('status', (data) => console.log('[ISL]', data.message));
+// ─── Navigation ─────────────────────────────────────────────────────
+function switchScreen(screenId, activeNavBtn) {
+    screenHome.classList.add('hidden');
+    screenDetector.classList.add('hidden');
+    $(screenId).classList.remove('hidden');
 
-// ═══════════ SETUP SCREEN ═══════════
+    navItems.forEach(item => item.classList.remove('active'));
+    if (activeNavBtn) activeNavBtn.classList.add('active');
 
-modeCards.forEach(card => {
-    card.addEventListener('click', () => {
-        modeCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedMode = card.dataset.mode;
+    if (screenId === 'screen-home' && cameraActive) {
+        stopCamera();
+    }
+}
 
-        // Show hand preference only for sign-to-text
-        handPrefSec.style.display = selectedMode === 'sign-to-text' ? 'block' : 'none';
-    });
-});
+navBtnHome.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-home', navBtnHome); });
+navBtnDetector.addEventListener('click', (e) => { e.preventDefault(); switchScreen('screen-detector', navBtnDetector); });
 
-handBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        handBtns.forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        selectedHand = btn.dataset.hand;
-    });
-});
-
-btnStart.addEventListener('click', () => {
-    setupScreen.classList.add('hidden');
-    if (selectedMode === 'sign-to-text') {
-        detectorScreen.classList.remove('hidden');
-    } else {
-        textToSignScreen.classList.remove('hidden');
+btnHeroStart.addEventListener('click', () => {
+    switchScreen('screen-detector', navBtnDetector);
+    if (!cameraActive) {
+        startCamera();
     }
 });
 
-btnBack.addEventListener('click', () => {
-    stopCamera();
-    detectorScreen.classList.add('hidden');
-    setupScreen.classList.remove('hidden');
-});
+// ─── Hand Toggle ────────────────────────────────────────────────────
+function setHandPreference(hand) {
+    selectedHand = hand;
+    btnHandRight.classList.toggle('active', hand === 'right');
+    btnHandLeft.classList.toggle('active', hand === 'left');
+    
+    // Update mirror effect instantly if camera is active
+    video.style.transform = hand === 'left' ? 'scaleX(1)' : 'scaleX(-1)';
+    annotatedOverlay.style.transform = video.style.transform;
+}
 
-btnBackTts.addEventListener('click', () => {
-    stopSlideshow();
-    textToSignScreen.classList.add('hidden');
-    setupScreen.classList.remove('hidden');
-});
+btnHandRight.addEventListener('click', () => setHandPreference('right'));
+btnHandLeft.addEventListener('click', () => setHandPreference('left'));
 
-// ═══════════ SIGN → TEXT MODE ═══════════
+// ─── Sign → Text Logic ──────────────────────────────────────────────
 
 socket.on('prediction', (data) => {
     // FPS
@@ -174,6 +137,7 @@ socket.on('prediction', (data) => {
     }
 
     // Status dot
+    cameraStatus.style.display = 'flex';
     statusDot.className = 'status-dot';
     if (data.hand_detected) {
         statusDot.classList.add(data.status);
@@ -185,80 +149,54 @@ socket.on('prediction', (data) => {
     // Predicted word
     if (data.word) {
         predictedWord.textContent = data.word;
-        predictedWord.className = 'predicted-word';
-        if (data.status === 'confirmed') predictedWord.classList.add('active');
-        else if (data.status === 'holding') predictedWord.classList.add('holding');
+        if (data.status === 'confirmed') predictedWord.style.color = 'var(--green)';
+        else if (data.status === 'holding') predictedWord.style.color = 'var(--accent-purple)';
+        else predictedWord.style.color = 'var(--text-primary)';
     } else {
         predictedWord.textContent = '—';
-        predictedWord.className = 'predicted-word';
+        predictedWord.style.color = 'var(--text-primary)';
     }
 
     // Confidence
     const conf = Math.round(data.confidence * 100);
     confidenceFill.style.width = conf + '%';
     confidenceText.textContent = conf + '%';
-
-    // Hold progress
-    if (data.status === 'holding' && data.hold_progress > 0) {
-        holdContainer.style.display = 'flex';
-        const circumference = 188.5;
-        holdRingFill.style.strokeDashoffset = circumference * (1 - data.hold_progress);
-        holdText.textContent = Math.round(data.hold_progress * 100) + '%';
-    } else {
-        holdContainer.style.display = 'none';
-    }
+    
+    if (data.status === 'holding') confidenceFill.style.background = 'var(--accent-purple)';
+    else if (data.status === 'confirmed') confidenceFill.style.background = 'var(--green)';
+    else confidenceFill.style.background = 'var(--text-primary)';
 
     // Capture snapshot on word confirmation
     if (data.snapshot && data.status === 'confirmed' && data.word) {
         wordSnapshots[data.word] = data.snapshot;
     }
 
-    // Update word chips ONLY when sentence changes (prevents blinking)
+    // Update word chips
     const sentenceKey = (data.sentence || []).join('|');
     if (sentenceKey !== lastSentenceKey) {
         lastSentenceKey = sentenceKey;
         updateWordChips(data.sentence);
     }
 
-    // No-hand timer (5s)
+    // No-hand timer
     if (!data.hand_detected && data.no_hand_seconds > 0 && data.sentence && data.sentence.length > 0) {
-        timerCard.style.display = 'block';
+        timerContainer.style.display = 'block';
         const progress = Math.min(data.no_hand_seconds / 5, 1) * 100;
         timerFill.style.width = progress + '%';
-        const remaining = Math.max(5 - Math.floor(data.no_hand_seconds), 0);
-        timerText.textContent = `Sentence finalizes in ${remaining}s...`;
     } else {
-        timerCard.style.display = 'none';
+        timerContainer.style.display = 'none';
     }
 });
 
 // ─── Sentence Complete ──────────────────────────────────────────────
 socket.on('sentence_complete', (data) => {
     lastCorrectedSentence = data.corrected;
-
     outputCard.style.display = 'block';
-
-    // Build clickable sentence — click word to see its gesture popup
+    
+    // Make AI Corrected Sentence Clickable
     buildClickableSentence(data.corrected, data.sentence || []);
-
-    // Hindi hidden (English only)
-    if (hindiSentence) hindiSentence.style.display = 'none';
-
-    // Show click hint if we have snapshots
-    if (Object.keys(wordSnapshots).length > 0 && clickHint) {
-        clickHint.style.display = 'block';
-    }
-
-    // Keep word chips visible but don't clear snapshots
-    timerCard.style.display = 'none';
-
-    // History (deduplicate)
-    if (data.raw !== lastHistoryRaw) {
-        lastHistoryRaw = data.raw;
-        addHistoryItem(data.raw, data.corrected);
-    }
-
-    // Speak in English
+    
+    timerContainer.style.display = 'none';
     speak(data.corrected);
 });
 
@@ -277,7 +215,6 @@ function buildClickableSentence(correctedText, rawWords) {
             span.title = `Click to see gesture for "${matchKey}"`;
             span.addEventListener('click', () => {
                 modalImage.src = wordSnapshots[matchKey];
-                modalImage.style.display = 'block';
                 modalWord.textContent = matchKey;
                 gestureModal.style.display = 'flex';
             });
@@ -303,7 +240,7 @@ function findSnapshotMatch(correctedWord, rawWords) {
     return null;
 }
 
-// ─── Camera ─────────────────────────────────────────────────────────
+// ─── Camera Control ─────────────────────────────────────────────────
 btnCamera.addEventListener('click', () => {
     if (cameraActive) stopCamera();
     else startCamera();
@@ -316,12 +253,12 @@ async function startCamera() {
         });
         streamRef = stream;
         video.srcObject = stream;
+        video.play().catch(e => console.warn("video.play() prevented:", e));
         cameraActive = true;
 
-        video.style.transform = selectedHand === 'left' ? 'scaleX(1)' : 'scaleX(-1)';
-        annotatedOverlay.style.transform = video.style.transform;
+        setHandPreference(selectedHand); // Apply mirroring
 
-        cameraOverlay.classList.add('hidden');
+        cameraOverlay.style.display = 'none';
         btnCamera.textContent = '⏹ Stop Camera';
         btnCamera.classList.add('active');
 
@@ -343,7 +280,8 @@ function stopCamera() {
     cameraActive = false;
     video.srcObject = null;
     annotatedOverlay.style.display = 'none';
-    cameraOverlay.classList.remove('hidden');
+    cameraOverlay.style.display = 'flex';
+    cameraStatus.style.display = 'none';
     btnCamera.innerHTML = '📷 Start Camera';
     btnCamera.classList.remove('active');
 }
@@ -359,11 +297,9 @@ btnClear.addEventListener('click', () => {
     socket.emit('clear_sentence');
     lastSentenceKey = '';
     updateWordChips([]);
-    wordSnapshots = {};
     outputCard.style.display = 'none';
-    if (clickHint) clickHint.style.display = 'none';
     predictedWord.textContent = '—';
-    predictedWord.className = 'predicted-word';
+    predictedWord.style.color = 'var(--text-primary)';
     confidenceFill.style.width = '0%';
     confidenceText.textContent = '0%';
 });
@@ -373,20 +309,7 @@ btnCopy.addEventListener('click', () => {
     navigator.clipboard.writeText(lastCorrectedSentence).then(() => showToast('Copied to clipboard!'));
 });
 
-btnDownload.addEventListener('click', () => {
-    let text = `ISL Detection Result\n${'='.repeat(30)}\n\n`;
-    text += `Sentence: ${lastCorrectedSentence}\n`;
-    text += `\nTimestamp: ${new Date().toLocaleString()}\n`;
-
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `isl_sentence_${Date.now()}.txt`;
-    a.click();
-    showToast('Downloaded!');
-});
-
-// ─── Speak (English only) ───────────────────────────────────────────
+// ─── Speak ──────────────────────────────────────────────────────────
 btnSpeak.addEventListener('click', () => {
     if (lastCorrectedSentence) speak(lastCorrectedSentence);
 });
@@ -394,38 +317,23 @@ btnSpeak.addEventListener('click', () => {
 function speak(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
-                   || voices.find(v => v.lang.startsWith('en'));
-    if (preferred) utterance.voice = preferred;
-
     window.speechSynthesis.speak(utterance);
 }
 
-if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-}
-
-// ─── Word Chips (with thumbnails) ───────────────────────────────────
+// ─── UI Helpers ─────────────────────────────────────────────────────
 function updateWordChips(words) {
     if (!words || words.length === 0) {
-        wordChips.innerHTML = '<span class="word-placeholder">Words will appear here...</span>';
+        wordChips.innerHTML = '<span class="words-placeholder">Words will appear here...</span>';
         return;
     }
-
     wordChips.innerHTML = '';
     words.forEach((w) => {
         const chip = document.createElement('div');
         chip.className = 'word-chip';
-
-        // Show snapshot thumbnail if available
+        
+        // Use snapshot thumbnail if exists
         const snap = wordSnapshots[w];
         if (snap) {
             const img = document.createElement('img');
@@ -433,32 +341,26 @@ function updateWordChips(words) {
             img.alt = w;
             chip.appendChild(img);
 
-            // Click to enlarge in modal
-            chip.style.cursor = 'pointer';
             chip.addEventListener('click', () => {
                 modalImage.src = snap;
-                modalImage.style.display = 'block';
                 modalWord.textContent = w;
                 gestureModal.style.display = 'flex';
             });
         }
-
+        
         const span = document.createElement('span');
         span.textContent = w;
         chip.appendChild(span);
+        
         wordChips.appendChild(chip);
     });
 }
 
-function addHistoryItem(raw, corrected) {
-    historyCard.style.display = 'block';
-    const item = document.createElement('div');
-    item.className = 'history-item';
-    item.innerHTML = `<div class="history-corrected">${corrected}</div>
-                      <div class="history-raw">Raw: ${raw}</div>`;
-    historyList.prepend(item);
-    while (historyList.children.length > 10) historyList.removeChild(historyList.lastChild);
-}
+// Modal Bindings
+if(modalClose) modalClose.addEventListener('click', () => gestureModal.style.display = 'none');
+if(gestureModal) gestureModal.addEventListener('click', (e) => {
+    if (e.target === gestureModal) gestureModal.style.display = 'none';
+});
 
 function showToast(msg) {
     toast.textContent = msg;
@@ -469,167 +371,3 @@ function showToast(msg) {
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
-// Modal
-modalClose.addEventListener('click', () => gestureModal.style.display = 'none');
-gestureModal.addEventListener('click', (e) => {
-    if (e.target === gestureModal) gestureModal.style.display = 'none';
-});
-
-// ═══════════ TEXT → SIGN MODE ═══════════
-
-btnTranslate.addEventListener('click', () => {
-    const text = ttsInput.value.trim();
-    if (!text) return;
-
-    ttsSlideshow.style.display = 'block';
-    ttsGrid.style.display = 'none';
-    slideshowLoading.style.display = 'flex';
-    slideshowWord.textContent = 'Generating...';
-    slideshowProgress.innerHTML = '';
-    stopSlideshow();
-
-    const b = $('tts-status-badge');
-    if (b) { b.textContent = 'Generating...'; b.classList.remove('connected'); }
-
-    socket.emit('text_to_sign', { text });
-});
-
-ttsInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') btnTranslate.click();
-});
-
-socket.on('sign_results', (data) => {
-    const b = $('tts-status-badge');
-    if (b) { b.textContent = 'Ready'; b.classList.add('connected'); }
-
-    if (data.error) {
-        showToast(data.error);
-        slideshowLoading.style.display = 'none';
-        return;
-    }
-
-    slideshowData = data.words;
-    slideshowIndex = 0;
-    slideshowLoading.style.display = 'none';
-
-    if (slideshowData.length === 0) {
-        showToast('No words to translate');
-        return;
-    }
-
-    // Build progress dots
-    slideshowProgress.innerHTML = '';
-    slideshowData.forEach((_, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'dot' + (i === 0 ? ' active' : '');
-        slideshowProgress.appendChild(dot);
-    });
-
-    showSlide(0);
-
-    // Build grid
-    ttsGrid.style.display = 'block';
-    gestureGrid.innerHTML = '';
-    slideshowData.forEach((item) => {
-        const card = document.createElement('div');
-        card.className = 'gesture-card';
-
-        const wordEl = document.createElement('div');
-        wordEl.className = 'gesture-card-word';
-        wordEl.textContent = item.word;
-        card.appendChild(wordEl);
-
-        if (item.image) {
-            // Dataset image
-            const img = document.createElement('img');
-            img.src = item.image;
-            img.alt = item.word;
-            img.className = 'gesture-card-img';
-            card.appendChild(img);
-
-            const tag = document.createElement('div');
-            tag.className = 'gesture-source-tag dataset';
-            tag.textContent = '📸 From Dataset';
-            card.appendChild(tag);
-        } else if (item.description) {
-            // API fallback description
-            const descEl = document.createElement('div');
-            descEl.className = 'gesture-card-desc';
-            descEl.innerHTML = formatDescription(item.description);
-            card.appendChild(descEl);
-
-            const tag = document.createElement('div');
-            tag.className = 'gesture-source-tag api';
-            tag.textContent = '🤖 AI Generated';
-            card.appendChild(tag);
-        }
-
-        gestureGrid.appendChild(card);
-    });
-});
-
-function formatDescription(desc) {
-    return desc
-        .split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-            line = line.replace(/^[\s•\-\*]+/, '').trim();
-            return `<div class="desc-step">👉 ${line}</div>`;
-        })
-        .join('');
-}
-
-function showSlide(index) {
-    if (index < 0 || index >= slideshowData.length) return;
-    slideshowIndex = index;
-
-    const item = slideshowData[index];
-    slideshowWord.textContent = item.word;
-
-    const area = document.querySelector('.slideshow-image-area');
-
-    if (item.image) {
-        // Show dataset image
-        area.innerHTML = `<img src="${item.image}" alt="${item.word}" class="slideshow-img" style="display:block;">`;
-    } else {
-        // Show description
-        area.innerHTML = `
-            <div class="slideshow-desc-card">
-                <div class="slideshow-desc-word">${item.word}</div>
-                <div class="slideshow-desc-text">${formatDescription(item.description)}</div>
-                <div class="gesture-source-tag api" style="margin-top:12px;">🤖 AI Generated (not in dataset)</div>
-            </div>
-        `;
-    }
-
-    const dots = slideshowProgress.querySelectorAll('.dot');
-    dots.forEach((d, i) => d.classList.toggle('active', i === index));
-}
-
-btnPrev.addEventListener('click', () => { stopSlideshow(); showSlide(slideshowIndex - 1); });
-btnNext.addEventListener('click', () => { stopSlideshow(); showSlide(slideshowIndex + 1); });
-
-btnPlay.addEventListener('click', () => {
-    if (slideshowPlaying) stopSlideshow();
-    else startSlideshow();
-});
-
-function startSlideshow() {
-    slideshowPlaying = true;
-    btnPlay.textContent = '⏸ Pause';
-    const speed = parseInt(speedSelect.value);
-    slideshowTimer = setInterval(() => {
-        showSlide((slideshowIndex + 1) % slideshowData.length);
-    }, speed);
-}
-
-function stopSlideshow() {
-    slideshowPlaying = false;
-    btnPlay.textContent = '⏯ Play';
-    if (slideshowTimer) { clearInterval(slideshowTimer); slideshowTimer = null; }
-}
-
-speedSelect.addEventListener('change', () => {
-    if (slideshowPlaying) { stopSlideshow(); startSlideshow(); }
-});
