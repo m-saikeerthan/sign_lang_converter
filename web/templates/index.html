@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ISL — Indian Sign Language Detector</title>
     <meta name="description" content="Real-time Indian Sign Language detection with AI-powered grammar correction.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <!-- Background Orbs -->
     <div class="bg-orb orb-top-right"></div>
@@ -48,9 +51,9 @@
             <div class="hero-pill">
                 <span>IN</span> Indian Sign Language
             </div>
-            
+
             <h1 class="hero-title">ISL Detector</h1>
-            
+
             <p class="hero-subtitle">
                 Bridge the communication gap with real-time sign language<br>
                 detection powered by AI. Translate hand gestures to text<br>
@@ -87,7 +90,7 @@
 
     <!-- ═══════════ DETECTOR SCREEN ═══════════ -->
     <div class="screen hidden" id="screen-detector">
-        
+
         <!-- Subheader -->
         <div class="subheader">
             <div class="subheader-left">
@@ -108,21 +111,21 @@
 
         <!-- Main Layout -->
         <div class="detector-layout">
-            
+
             <!-- Left: Camera -->
             <div class="camera-column">
                 <div class="camera-card">
                     <video id="video" autoplay playsinline muted class="raw-feed"></video>
                     <canvas id="canvas" style="display:none;"></canvas>
-                    
+
                     <!-- Base overlay when off -->
                     <div class="camera-placeholder" id="camera-overlay">
                         📷 Click "Start Camera" to begin
                     </div>
-                    
+
                     <!-- Active feed from server -->
                     <img id="annotated-overlay" class="annotated-feed" alt="" style="display:none;">
-                    
+
                     <!-- Status dot overlay -->
                     <div class="camera-status" id="camera-status" style="display:none;">
                         <div class="status-dot" id="status-dot"></div>
@@ -137,11 +140,11 @@
 
             <!-- Right: Results -->
             <div class="results-column">
-                
+
                 <!-- Current Gesture Card -->
                 <div class="result-card">
                     <div class="card-title">CURRENT GESTURE</div>
-                    
+
                     <div class="current-gesture-display">
                         <div class="predicted-word" id="predicted-word">—</div>
                         <div class="confidence-row">
@@ -154,7 +157,8 @@
 
                     <!-- No Hand Timer -->
                     <div class="timer-container" id="timer-container" style="display:none; margin-top: 15px;">
-                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Sentence finalize timer...</span>
+                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Sentence finalize
+                            timer...</span>
                         <div class="progress-track" style="margin-top: 4px;">
                             <div class="progress-fill" id="timer-fill" style="width: 0%; background: #f39c12;"></div>
                         </div>
@@ -171,7 +175,6 @@
 
                     <!-- Finished sentence output container -->
                     <div class="sentence-output" id="output-card" style="display:none;">
-                        <div class="corrected-label">✨ AI Corrected Sentence</div>
                         <div class="corrected-text" id="corrected-sentence"></div>
                         <div class="sentence-actions">
                             <button class="btn-action" id="btn-speak">🔊 Speak</button>
@@ -193,15 +196,20 @@
         <div class="info-grid">
             <div class="info-card">
                 <h3>🔄 Text to Sign Translation</h3>
-                <p>Reversing the paradigm. In the future, we aim to allow users to type or speak natural language, and the system will generate an animated avatar performing the corresponding ISL signs.</p>
+                <p>Reversing the paradigm. In the future, we aim to allow users to type or speak natural language, and
+                    the system will generate an animated avatar performing the corresponding ISL signs.</p>
             </div>
             <div class="info-card">
                 <h3>🌍 Different Native Languages</h3>
-                <p>While our grammar correction and translation currently supports English and Hindi, future architectures will integrate multi-lingual pipelines for seamless translation into regional dialects and international languages.</p>
+                <p>While our grammar correction and translation currently supports English and Hindi, future
+                    architectures will integrate multi-lingual pipelines for seamless translation into regional dialects
+                    and international languages.</p>
             </div>
             <div class="info-card">
                 <h3>😊 Facial Expression Recognition</h3>
-                <p>Sign language is more than just hands; facial expressions denote grammar, tone, and questions. By integrating face mesh analysis alongside hand tracking, the AI will contextualize emotions for far more accurate linguistic translation.</p>
+                <p>Sign language is more than just hands; facial expressions denote grammar, tone, and questions. By
+                    integrating face mesh analysis alongside hand tracking, the AI will contextualize emotions for far
+                    more accurate linguistic translation.</p>
             </div>
         </div>
     </div>
@@ -210,16 +218,21 @@
     <div class="screen hidden" id="screen-about">
         <div class="info-hero">
             <h1>ℹ️ About Us</h1>
-            <h2 style="color: var(--accent-purple); font-weight: 800; margin-top: -10px; margin-bottom: 20px;">"Breaking silence, building bridges."</h2>
+            <h2 style="color: var(--accent-purple); font-weight: 800; margin-top: -10px; margin-bottom: 20px;">"Breaking
+                silence, building bridges."</h2>
         </div>
         <div class="info-grid dual">
             <div class="info-card">
                 <h3>❓ Why we are doing this</h3>
-                <p>Communication is a fundamental human right. Millions of speech and hearing-impaired individuals face daily socio-economic barriers due to language disconnects. Bridging the gap shouldn't require expensive hardware or hiring full-time interpreters.</p>
+                <p>Communication is a fundamental human right. Millions of speech and hearing-impaired individuals face
+                    daily socio-economic barriers due to language disconnects. Bridging the gap shouldn't require
+                    expensive hardware or hiring full-time interpreters.</p>
             </div>
             <div class="info-card">
                 <h3>🤝 How it will help</h3>
-                <p>By placing real-time, lightweight AI translation on everyday web browsers, we foster true inclusion in workplaces, schools, hospitals, and homes. Immediate, frictionless communication empowers independence and normalizes sign language interaction globally.</p>
+                <p>By placing real-time, lightweight AI translation on everyday web browsers, we foster true inclusion
+                    in workplaces, schools, hospitals, and homes. Immediate, frictionless communication empowers
+                    independence and normalizes sign language interaction globally.</p>
             </div>
         </div>
     </div>
@@ -230,7 +243,7 @@
             <h1>⚙️ Project Details & Architecture</h1>
             <p>Under the hood of the Indian Sign Language Detector.</p>
         </div>
-        
+
         <div class="info-card wide" style="margin-bottom: 24px;">
             <h3>🛠 Tools & Technologies</h3>
             <div class="tag-row">
@@ -245,16 +258,22 @@
         <div class="info-grid dual">
             <div class="info-card">
                 <h3>📊 The Custom Dataset</h3>
-                <p>Generic datasets lack the nuances needed for ISL. We built a custom data tool (<code>smart_capture.py</code>) that records hundreds of frames per sign, automatically tracking hands, tossing out empty frames, and generating robust data points for both 1-hand and 2-hand gestures.</p>
+                <p>Generic datasets lack the nuances needed for ISL. We built a custom data tool
+                    (<code>smart_capture.py</code>) that records hundreds of frames per sign, automatically tracking
+                    hands, tossing out empty frames, and generating robust data points for both 1-hand and 2-hand
+                    gestures.</p>
             </div>
             <div class="info-card">
                 <h3>🧠 The Pipeline</h3>
                 <ol class="timeline-list">
                     <li><strong>Capture:</strong> Browser webcam stream.</li>
                     <li><strong>Track:</strong> MediaPipe extracts 3D wrist/finger landmarks.</li>
-                    <li><strong>Engineer:</strong> Compute advanced math properties (e.g., Euclidean distances, finger curl angles).</li>
-                    <li><strong>Predict:</strong> A lightweight TFLite deep neural network classifies the exact gesture.</li>
-                    <li><strong>NLP Fix:</strong> The Gemini AI transforms clunky literal words into fluent, grammatically correct sentences.</li>
+                    <li><strong>Engineer:</strong> Compute advanced math properties (e.g., Euclidean distances, finger
+                        curl angles).</li>
+                    <li><strong>Predict:</strong> A lightweight TFLite deep neural network classifies the exact gesture.
+                    </li>
+                    <li><strong>NLP Fix:</strong> The Gemini AI transforms clunky literal words into fluent,
+                        grammatically correct sentences.</li>
                 </ol>
             </div>
         </div>
@@ -275,4 +294,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
+
 </html>

@@ -33,7 +33,7 @@ CONFIDENCE_THRESHOLD = 0.80
 DIFF_THRESHOLD = 0.20
 GESTURE_HOLD_TIME = 1.0
 SMOOTHING_ALPHA = 0.55
-NO_HAND_TIMEOUT = 5.0   # seconds before finalizing sentence
+NO_HAND_TIMEOUT = 3.0   # seconds before finalizing sentence
 
 # ─── Camera ──────────────────────────────────────────────────────────
 CAMERA_INDEX = 0

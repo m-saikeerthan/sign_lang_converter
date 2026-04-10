@@ -202,7 +202,7 @@ socket.on('prediction', (data) => {
     // No-hand timer
     if (!data.hand_detected && data.no_hand_seconds > 0 && data.sentence && data.sentence.length > 0) {
         timerContainer.style.display = 'block';
-        const progress = Math.min(data.no_hand_seconds / 5, 1) * 100;
+        const progress = Math.min(data.no_hand_seconds / 3, 1) * 100;
         timerFill.style.width = progress + '%';
     } else {
         timerContainer.style.display = 'none';
